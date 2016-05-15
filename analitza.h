@@ -48,6 +48,30 @@ public:
     Variables vars;
     QString err;
 
+private:
+    QDomNode uplimit(QDomNode);
+    QDomNode downlimit(QDomNode);
+    QDomNode first_val(QDomNode);
+    QString mmlexp;
+    double evalua(QDomNode n);
+    double opera(double, double, QString, int);
+    unsigned int toOpId(QDomNode);
+    QString get_op(QDomNode);
+
+    QDomNode simp(QDomNode);
+    ////////////////////////////////////////
+
+    double sum(QDomNode);
+    double func(QDomNode);
+
+public:
+    QString toString();
+    QString str(QDomNode);
+
+private:
+    QString escriuS(QString res, QString oper, QString op, int);
+    QString escriuMMLP(QString res, QString oper, QString op, int);
+};
 
 #endif
 
