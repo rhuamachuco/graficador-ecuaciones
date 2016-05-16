@@ -53,3 +53,36 @@ struct TOKEN {
 // void printPilaOpr(QValueStack<int> opr);
 // QString opr2str(int);
 
+class QExp{
+public:
+	QExp(QString);
+	~QExp();
+	
+	int parse();
+	QString error();
+	QString mathML();
+	
+private:
+	QString mml;
+	QString str; //Auxiliar pel parsing
+	QString err;
+	
+	tokEnum tok;
+	QString tokval;
+	
+	QValueStack<int> opr;
+	QValueStack<QString> val;
+	QValueStack<QString> func;
+	
+	int valTop, oprTop;
+	bool firsttok;
+	tokEnum prevtok;
+	tokEnum antnum;
+	
+	TOKEN pillatoken(QString &a);
+	int getTok();
+	int shift();
+	int reduce();
+};
+
+#endif
