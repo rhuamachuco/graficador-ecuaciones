@@ -143,3 +143,147 @@ TOKEN QExp::pillatoken(QString &a){
 	antnum = ret.tipus;
 	return ret;
 }
+
+int QExp::getTok(){
+	QString s;
+	TOKEN t;
+	if(firsttok){
+		firsttok=false;
+		prevtok=tEof;
+	}
+	t=pillatoken(str);
+	tok = t.tipus;
+	tokval = t.val;
+	
+	prevtok=tok;
+	return 0;
+}
+
+int QExp::shift(){
+// 	cout << "------>" << tokval.ascii() << "'" << endl;
+	if(tok==tVal){
+		val.push(tokval);
+	} else if(tok==tFunc){
+		func.push(tokval);
+		opr.push((char)tok);
+	} else
+		opr.push((char)tok);
+	if(getTok())
+		return 1;
+	return 0;
+}
+
+int QExp::reduce(){
+	tokEnum oper = (tokEnum) opr.top();
+	opr.pop();
+	QString aux = val.pop();
+	
+	switch(oper) {
+		case tAdd:
+			val.push(QString("<apply><plus />%1%2</apply>").arg(val.pop()).arg(aux));
+			break;
+		case tUmi:
+			val.push(QString("<apply><minus />%1</apply>").arg(aux));
+			break;
+		case tSub:
+			val.push(QString("<apply><minus />%1%2</apply>").arg(val.pop()).arg(aux));
+			break;
+		case tMul:
+			val.push(QString("<apply><times />%1%2</apply>").arg(val.pop()).arg(aux));
+			break;
+		case tDiv:
+			val.push(QString("<apply><divide />%1%2</apply>").arg(val.pop()).arg(aux));
+			break;
+		case tPow:
+			val.push(QString("<apply><power />%1%2</apply>").arg(val.pop()).arg(aux));
+			break;
+		case tLimits:
+			val.push(QString("<uplimit>%2</uplimit><downlimit>%1</downlimit>").arg(val.pop()).arg(aux));
+			break;
+		case tAssig: // :=
+			val.push(QString("<declare>%1%2</declare>").arg(val.pop()).arg(aux));
+			break;
+		case tFunc:
+			if(Analitza::isOperador(func.top()))
+				val.push(QString("<apply><%1 />%2</apply>").arg(func.pop()).arg(aux));
+			else
+				val.push(QString("<apply><ci type='function'>%1</ci>%2</apply>").arg(func.pop()).arg(aux));
+			break;
+		case tLambda: // ->
+			if(opr.top()==tLambda || opr[1]==tFunc)
+				val.push(QString("<bvar>%1</bvar>%2").arg(val.pop()).arg(aux));
+			else
+				val.push(QString("<lambda><bvar>%1</bvar>%2</lambda>").arg(val.pop()).arg(aux));
+// 			printPilaOpr(opr);
+			break;
+		case tComa:
+			val.push(QString("%1%2").arg(val.pop()).arg(aux));
+			break;
+		case tRpr:
+			opr.pop();
+		default:
+			val.push(aux);
+			break;
+	}
+	return 0;
+}
+
+int QExp::parse(){
+	opr.push(tEof);
+	firsttok = true;
+	antnum= tEof;
+	
+	if(getTok()) return 1;
+	while(err.isEmpty()){
+		if(tok==tVal){
+			if(shift()) return 1;
+			continue;
+		}
+		QString a; //For PPC too
+// 		printf("acc=%d stk=%d, tok=%d\n", parseTbl[opr.top()][tok], opr.top(), tok);
+		switch(parseTbl[opr.top()][tok]){
+			case K:
+				a=val.pop();
+				if(opr.top()==tLambda)
+					val.push(QString("%1<bvar>%2</bvar>").arg(val.pop()).arg(a));
+					else
+					val.push(QString("%1%2").arg(val.pop()).arg(a));
+				opr.pop();
+				break;
+			case R:
+				if(reduce()) return 1;
+				break;
+			case S:
+				if(shift()) return 1;
+				break;
+			case A:
+				mml = QString("<math>%1</math>").arg(val.pop());
+// 				cout << val.top().ascii() << endl;
+				return 0;
+			case E1:
+				err += i18n("Missing right paranthesis<br />\n");
+				return 1;
+			case E2:
+				err += i18n("Missing operator< p/>\n");
+				return 2;
+			case E3:
+				err += i18n("Unbalanced right parenthesis<br />\n");
+				return 3;
+			case E:
+				err += i18n("Error<br />\n");
+				return 4;
+			default:
+// 				cerr << "?? (" << (int) opr.top() << ", " << (int) tok << ") = "  << (int) parseTbl[opr.top()][tok] << endl;
+				break;
+		}
+	}
+	return -1;
+}
+
+QString QExp::mathML(){
+	return mml;
+}
+
+QString QExp::error(){
+	return err;
+}
